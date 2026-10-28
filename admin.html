@@ -1,0 +1,256 @@
+
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>AquaGuard AI | Admin Dashboard</title>
+<style>
+*{box-sizing:border-box}
+body{margin:0;font-family:Arial,sans-serif;background:#f2f7f8;color:#18343b}
+header{background:#073b46;color:white;padding:22px 5%;display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:12px}
+header h1{margin:0;font-size:25px}
+header p{margin:7px 0 0;color:#b9e5ec}
+nav a{color:white;text-decoration:none;border:1px solid #57818a;padding:10px 13px;border-radius:8px;display:inline-block;margin:3px}
+main{max-width:1200px;margin:28px auto;padding:0 18px}
+.card{background:white;padding:22px;border-radius:14px;box-shadow:0 3px 14px #173b4510;margin-bottom:22px}
+h2{margin-top:0}
+input,select,button{font:inherit;padding:11px;border:1px solid #cbdadd;border-radius:7px}
+button{background:#087e8b;color:white;border:0;cursor:pointer}
+button:hover{background:#05636d}
+button:disabled{opacity:.5;cursor:not-allowed}
+input{width:100%;max-width:350px}
+.login{max-width:430px;margin:55px auto;text-align:center}
+.stats{display:grid;grid-template-columns:repeat(auto-fit,minmax(160px,1fr));gap:15px;margin-bottom:22px}
+.stat{background:white;padding:20px;border-radius:12px;border-left:5px solid #078b99;box-shadow:0 3px 12px #1233}
+.stat p{color:#60757a;margin:0 0 10px}
+.stat strong{font-size:30px}
+.table-wrap{overflow-x:auto}
+table{width:100%;border-collapse:collapse;min-width:750px}
+th,td{text-align:left;padding:13px;border-bottom:1px solid #e2ebed}
+th{background:#edf6f7}
+.badge{padding:5px 8px;border-radius:20px;font-size:12px;background:#e6eff0}
+.notice{padding:12px;border-radius:8px;background:#fff6dc;color:#735719;margin-bottom:16px}
+.muted{color:#63777b;font-size:14px}
+.row{display:flex;gap:10px;flex-wrap:wrap;align-items:center}
+.hidden{display:none}
+.error{color:#b42318}
+footer{text-align:center;color:#60757a;padding:25px}
+@media(max-width:600px){header{align-items:flex-start}header h1{font-size:21px}.card{padding:15px}}
+</style>
+</head>
+<body>
+<header>
+  <div>
+    <h1>💧 AquaGuard AI</h1>
+    <p>Administration & Complaint Management</p>
+  </div>
+  <nav>
+    <a href="/">Dashboard</a>
+    <a href="/complaints.html">Report a Complaint</a>
+    <a href="/admin.html">Admin</a>
+  </nav>
+</header>
+
+<main>
+  <section id="login" class="card login">
+    <h2>Administrator Login</h2>
+    <p class="muted">Sign in to open the complaint management dashboard.</p>
+    <form id="loginForm">
+      <input id="password" type="password" placeholder="Enter admin password" required>
+      <p><button type="submit">Login</button></p>
+      <p id="loginMessage" class="error"></p>
+    </form>
+    <p class="muted">Use the demo password configured in your server, if applicable.</p>
+  </section>
+
+  <section id="dashboard" class="hidden">
+    <div class="row" style="justify-content:space-between;margin-bottom:18px">
+      <div>
+        <h2>Admin Dashboard</h2>
+        <p class="muted">Review complaints and update their status.</p>
+      </div>
+      <button id="logout">Logout</button>
+    </div>
+
+    <div class="notice">
+      Demo mode: complaints below are stored in this browser. This page is not connected to server-side complaint storage yet.
+    </div>
+
+    <div class="stats">
+      <div class="stat"><p>Total Complaints</p><strong id="total">0</strong></div>
+      <div class="stat"><p>Submitted</p><strong id="submitted">0</strong></div>
+      <div class="stat"><p>Under Review</p><strong id="review">0</strong></div>
+      <div class="stat"><p>Resolved</p><strong id="resolved">0</strong></div>
+    </div>
+
+    <section class="card">
+      <div class="row" style="justify-content:space-between">
+        <h2>Complaint Records</h2>
+        <div class="row">
+          <select id="filter">
+            <option value="All">All statuses</option>
+            <option value="Submitted">Submitted</option>
+            <option value="Under Review">Under Review</option>
+            <option value="Resolved">Resolved</option>
+          </select>
+          <button id="refresh">Refresh</button>
+        </div>
+      </div>
+
+      <div class="table-wrap">
+        <table>
+          <thead>
+            <tr>
+              <th>Complaint ID</th>
+              <th>Name</th>
+              <th>Category</th>
+              <th>Location</th>
+              <th>Description</th>
+              <th>Status</th>
+              <th>Update Status</th>
+            </tr>
+          </thead>
+          <tbody id="complaintRows"></tbody>
+        </table>
+      </div>
+      <p id="empty" class="muted">No complaints found in browser storage.</p>
+    </section>
+
+    <section class="card">
+      <h2>Demonstration Data</h2>
+      <p class="muted">Add sample complaints to test the dashboard. This will not create real reports.</p>
+      <button id="addSamples">Add Sample Complaints</button>
+      <button id="clearSamples" style="background:#a33">Clear Demo Complaints</button>
+      <p id="dataMessage" class="muted"></p>
+    </section>
+  </section>
+</main>
+
+<footer>AquaGuard AI · Water Quality & Complaint Intelligence</footer>
+
+<script>
+const $ = id => document.getElementById(id);
+const STORAGE_KEY = "aquaguardComplaints";
+const DEMO_PASSWORD = "AquaAdmin2026!";
+
+function readComplaints() {
+  try {
+    const data = JSON.parse(localStorage.getItem(STORAGE_KEY) || "[]");
+    return Array.isArray(data) ? data : [];
+  } catch (error) {
+    return [];
+  }
+}
+
+function saveComplaints(items) {
+  localStorage.setItem(STORAGE_KEY, JSON.stringify(items));
+}
+
+function safeText(value) {
+  return String(value ?? "").replace(/[&<>"']/g, ch => ({
+    "&":"&amp;", "<":"&lt;", ">":"&gt;",
+    '"':"&quot;", "'":"&#39;"
+  })[ch]);
+}
+
+function getStatus(item) {
+  return item.status || "Submitted";
+}
+
+function render() {
+  const all = readComplaints();
+  $("total").textContent = all.length;
+  $("submitted").textContent = all.filter(c => getStatus(c) === "Submitted").length;
+  $("review").textContent = all.filter(c => getStatus(c) === "Under Review").length;
+  $("resolved").textContent = all.filter(c => getStatus(c) === "Resolved").length;
+
+  const selected = $("filter").value;
+  const visible = all.filter(c => selected === "All" || getStatus(c) === selected);
+  $("empty").classList.toggle("hidden", visible.length > 0);
+
+  $("complaintRows").innerHTML = visible.map(c => {
+    const id = c.id || c.complaintId || "Not assigned";
+    const status = getStatus(c);
+    return `<tr>
+      <td>${safeText(id)}</td>
+      <td>${safeText(c.name || c.fullName || "Citizen")}</td>
+      <td>${safeText(c.category || "Water issue")}</td>
+      <td>${safeText(c.location || c.area || "Not specified")}</td>
+      <td>${safeText(c.description || c.message || "-")}</td>
+      <td><span class="badge">${safeText(status)}</span></td>
+      <td>
+        <select data-id="${safeText(id)}" class="statusSelect" aria-label="Change status for ${safeText(id)}">
+          <option ${status==="Submitted"?"selected":""}>Submitted</option>
+          <option ${status==="Under Review"?"selected":""}>Under Review</option>
+          <option ${status==="Resolved"?"selected":""}>Resolved</option>
+        </select>
+        <button data-update="${safeText(id)}">Save</button>
+      </td>
+    </tr>`;
+  }).join("");
+
+  $("complaintRows").querySelectorAll("button[data-update]").forEach(button => {
+    button.addEventListener("click", () => {
+      const id = button.dataset.update;
+      const select = [...document.querySelectorAll(".statusSelect")]
+        .find(el => el.dataset.id === id);
+      const items = readComplaints();
+      const item = items.find(c => String(c.id || c.complaintId || "Not assigned") === id);
+      if (!item || !select) return;
+      item.status = select.value;
+      saveComplaints(items);
+      $("dataMessage").textContent = "Status updated in this browser.";
+      render();
+    });
+  });
+}
+
+$("loginForm").addEventListener("submit", event => {
+  event.preventDefault();
+  if ($("password").value === DEMO_PASSWORD) {
+    $("login").classList.add("hidden");
+    $("dashboard").classList.remove("hidden");
+    render();
+  } else {
+    $("loginMessage").textContent = "Incorrect demo password.";
+  }
+});
+
+$("logout").addEventListener("click", () => {
+  $("password").value = "";
+  $("dashboard").classList.add("hidden");
+  $("login").classList.remove("hidden");
+});
+
+$("filter").addEventListener("change", render);
+$("refresh").addEventListener("click", render);
+
+$("addSamples").addEventListener("click", () => {
+  const items = readComplaints();
+  items.push(
+    {
+      id:"AG-DEMO-001", name:"Demo Citizen", category:"Water Leakage",
+      location:"Campus Block A", description:"Water leaking near the pipeline.",
+      status:"Submitted", demo:true
+    },
+    {
+      id:"AG-DEMO-002", name:"Demo Student", category:"Water Quality",
+      location:"Hostel Zone", description:"Water appears cloudy.",
+      status:"Under Review", demo:true
+    }
+  );
+  saveComplaints(items);
+  $("dataMessage").textContent = "Sample complaints added.";
+  render();
+});
+
+$("clearSamples").addEventListener("click", () => {
+  if (!confirm("Delete all complaints saved in this browser?")) return;
+  saveComplaints([]);
+  $("dataMessage").textContent = "Browser complaint list cleared.";
+  render();
+});
+</script>
+</body>
+</html>

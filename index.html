@@ -1,0 +1,979 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+
+    <title>AquaGuard AI | Water Intelligence Dashboard</title>
+
+    <link rel="stylesheet" href="/style.css">
+
+    <!-- Leaflet map library -->
+    <link
+        rel="stylesheet"
+        href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css"
+    >
+
+    <style>
+        :root {
+            --primary: #087f8c;
+            --primary-dark: #075e68;
+            --background: #f3f8fa;
+            --card: #ffffff;
+            --text: #17313b;
+            --muted: #627984;
+            --border: #dce8ec;
+            --low: #16865b;
+            --moderate: #d39b18;
+            --high: #e77731;
+            --critical: #d63d4f;
+        }
+
+        * {
+            box-sizing: border-box;
+        }
+
+        body {
+            margin: 0;
+            background: var(--background);
+            color: var(--text);
+            font-family: Arial, Helvetica, sans-serif;
+            line-height: 1.6;
+        }
+
+        button, input {
+            font: inherit;
+        }
+
+        button {
+            cursor: pointer;
+        }
+
+        .topbar {
+            background: #073b46;
+            color: white;
+            padding: 18px 5%;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            gap: 18px;
+            flex-wrap: wrap;
+        }
+
+        .brand {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+        }
+
+        .brand-icon {
+            font-size: 32px;
+        }
+
+        .brand h1 {
+            font-size: 23px;
+            margin: 0;
+        }
+
+        .brand p {
+            margin: 0;
+            color: #b9dce1;
+            font-size: 12px;
+        }
+
+        .nav-links {
+            display: flex;
+            gap: 10px;
+            flex-wrap: wrap;
+        }
+
+        .nav-links a {
+            color: white;
+            text-decoration: none;
+            padding: 9px 13px;
+            border-radius: 8px;
+            border: 1px solid #477780;
+            font-size: 14px;
+        }
+
+        .nav-links a:hover {
+            background: var(--primary);
+        }
+
+        .container {
+            width: min(1200px, 92%);
+            margin: 28px auto;
+        }
+
+        .hero {
+            background: linear-gradient(125deg, #087f8c, #0a596c);
+            border-radius: 18px;
+            padding: 30px;
+            color: white;
+            margin-bottom: 24px;
+        }
+
+        .hero h2 {
+            margin: 0 0 8px;
+            font-size: clamp(25px, 4vw, 36px);
+        }
+
+        .hero p {
+            margin: 0;
+            color: #e0f5f6;
+            max-width: 720px;
+        }
+
+        .section-heading {
+            margin: 30px 0 14px;
+        }
+
+        .section-heading h2 {
+            margin: 0;
+            font-size: 23px;
+        }
+
+        .section-heading p {
+            color: var(--muted);
+            margin: 4px 0 0;
+        }
+
+        .grid {
+            display: grid;
+            grid-template-columns: repeat(2, minmax(0, 1fr));
+            gap: 20px;
+        }
+
+        .panel, .stat-card {
+            background: var(--card);
+            border: 1px solid var(--border);
+            border-radius: 16px;
+            padding: 22px;
+            box-shadow: 0 4px 16px #17313b08;
+            min-width: 0;
+        }
+
+        .panel h2, .panel h3 {
+            margin-top: 0;
+        }
+
+        .muted {
+            color: var(--muted);
+        }
+
+        .field-grid {
+            display: grid;
+            grid-template-columns: repeat(2, minmax(0, 1fr));
+            gap: 15px;
+            margin-top: 16px;
+        }
+
+        label {
+            display: block;
+            font-size: 14px;
+            font-weight: 600;
+        }
+
+        input, #area {
+            width: 100%;
+            padding: 11px 12px;
+            margin-top: 6px;
+            border: 1px solid #cbdde2;
+            border-radius: 8px;
+            background: white;
+            color: var(--text);
+            font: inherit;
+        }
+
+        input:focus, #area:focus {
+            outline: 2px solid #80c9d0;
+            border-color: var(--primary);
+        }
+
+        .actions {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 10px;
+            margin-top: 18px;
+        }
+
+        .primary, .secondary, .danger {
+            border: 0;
+            border-radius: 9px;
+            padding: 11px 16px;
+            font-weight: 700;
+        }
+
+        .primary {
+            background: var(--primary);
+            color: white;
+        }
+
+        .primary:hover {
+            background: var(--primary-dark);
+        }
+
+        .secondary {
+            background: #e8f2f4;
+            color: #184c56;
+        }
+
+        .danger {
+            background: #ffeded;
+            color: #9f2636;
+        }
+
+        button:disabled {
+            opacity: .55;
+            cursor: not-allowed;
+        }
+
+        .status {
+            min-height: 24px;
+            color: var(--primary-dark);
+            font-size: 14px;
+            overflow-wrap: anywhere;
+        }
+
+        .result-score {
+            display: flex;
+            align-items: center;
+            gap: 18px;
+            flex-wrap: wrap;
+            margin: 20px 0;
+        }
+
+        .score-circle {
+            height: 100px;
+            width: 100px;
+            border-radius: 50%;
+            border: 7px solid #d7eeee;
+            display: grid;
+            place-items: center;
+            font-size: 30px;
+            font-weight: 800;
+            color: var(--primary-dark);
+        }
+
+        .priority {
+            display: inline-block;
+            border-radius: 20px;
+            padding: 5px 12px;
+            font-size: 13px;
+            font-weight: 800;
+        }
+
+        .low {
+            color: var(--low);
+        }
+
+        .moderate {
+            color: #916400;
+        }
+
+        .high {
+            color: var(--high);
+        }
+
+        .critical {
+            color: var(--critical);
+        }
+
+        .priority.low {
+            background: #e0f6eb;
+        }
+
+        .priority.moderate {
+            background: #fff3ce;
+        }
+
+        .priority.high {
+            background: #ffeadc;
+        }
+
+        .priority.critical {
+            background: #ffe0e4;
+        }
+
+        .meter {
+            width: 100%;
+            height: 12px;
+            background: #e7eff1;
+            border-radius: 20px;
+            overflow: hidden;
+            margin: 12px 0;
+        }
+
+        #meter-fill {
+            width: 0;
+            height: 100%;
+            background: var(--primary);
+            transition: width .3s;
+        }
+
+        #meter-fill.low, .chart-bar.low, .map-marker.low {
+            background: var(--low);
+        }
+
+        #meter-fill.moderate, .chart-bar.moderate,
+        .map-marker.moderate {
+            background: var(--moderate);
+        }
+
+        #meter-fill.high, .chart-bar.high, .map-marker.high {
+            background: var(--high);
+        }
+
+        #meter-fill.critical, .chart-bar.critical,
+        .map-marker.critical {
+            background: var(--critical);
+        }
+
+        #reasons {
+            padding-left: 22px;
+        }
+
+        .stat-grid {
+            display: grid;
+            grid-template-columns: repeat(3, minmax(0, 1fr));
+            gap: 16px;
+        }
+
+        .stat-card p {
+            margin: 0;
+            color: var(--muted);
+            font-size: 13px;
+        }
+
+        .stat-card strong {
+            display: block;
+            font-size: 29px;
+            margin-top: 5px;
+        }
+
+        .table-wrap {
+            width: 100%;
+            overflow-x: auto;
+        }
+
+        table {
+            border-collapse: collapse;
+            width: 100%;
+            min-width: 780px;
+        }
+
+        th, td {
+            border-bottom: 1px solid var(--border);
+            padding: 12px 10px;
+            text-align: left;
+            font-size: 13px;
+            vertical-align: top;
+        }
+
+        th {
+            background: #f1f8f9;
+            color: #31545e;
+        }
+
+        .rank-cell {
+            font-weight: 800;
+        }
+
+        .table-score {
+            font-weight: 800;
+        }
+
+        .table-priority {
+            font-weight: 800;
+        }
+
+        .remove-area {
+            border: 0;
+            padding: 6px 10px;
+            background: #ffeded;
+            color: #9f2636;
+            border-radius: 6px;
+        }
+
+        .chart-row {
+            display: grid;
+            grid-template-columns: minmax(90px, 160px) 1fr 60px;
+            gap: 12px;
+            align-items: center;
+            margin: 15px 0;
+        }
+
+        .chart-name {
+            font-size: 13px;
+            overflow-wrap: anywhere;
+        }
+
+        .chart-track {
+            height: 14px;
+            background: #e7eff1;
+            border-radius: 20px;
+            overflow: hidden;
+        }
+
+        .chart-bar {
+            height: 100%;
+            border-radius: 20px;
+            background: var(--primary);
+        }
+
+        .chart-value {
+            font-size: 12px;
+            font-weight: 800;
+            text-align: right;
+        }
+
+        #water-risk-map {
+            height: 390px;
+            min-height: 300px;
+            width: 100%;
+            border-radius: 12px;
+            z-index: 1;
+            overflow: hidden;
+            background: #e7f1ee;
+        }
+
+        .map-marker {
+            width: 34px;
+            height: 34px;
+            border: 2px solid white;
+            border-radius: 50%;
+            color: white;
+            display: grid;
+            place-items: center;
+            font-weight: 800;
+            box-shadow: 0 2px 8px #0003;
+        }
+
+        .fallback-map {
+            position: relative;
+            min-height: 300px;
+            background:
+                linear-gradient(35deg, transparent 46%, #d2e4d9 47%, #d2e4d9 50%, transparent 51%),
+                linear-gradient(145deg, transparent 46%, #d2e4d9 47%, #d2e4d9 50%, transparent 51%),
+                #eaf4ef;
+            border: 1px solid var(--border);
+        }
+
+        .fallback-note {
+            position: absolute;
+            top: 12px;
+            left: 12px;
+            right: 12px;
+            text-align: center;
+            color: #31545e;
+            font-size: 12px;
+        }
+
+        .fallback-marker {
+            position: absolute;
+            transform: translate(-50%, -50%);
+            width: 38px;
+            height: 38px;
+            border: 2px solid white;
+            border-radius: 50%;
+            color: white;
+            font-weight: 800;
+            box-shadow: 0 2px 8px #0003;
+        }
+
+        .fallback-marker.low {
+            background: var(--low);
+        }
+
+        .fallback-marker.moderate {
+            background: var(--moderate);
+        }
+
+        .fallback-marker.high {
+            background: var(--high);
+        }
+
+        .fallback-marker.critical {
+            background: var(--critical);
+        }
+
+        .disclaimer {
+            border-left: 4px solid #d39b18;
+            background: #fff9e8;
+            color: #6c561a;
+            border-radius: 8px;
+            padding: 13px 15px;
+            font-size: 13px;
+            margin-top: 20px;
+        }
+
+        footer {
+            margin-top: 35px;
+            padding: 25px 5%;
+            text-align: center;
+            background: #073b46;
+            color: #d9edf0;
+            font-size: 13px;
+        }
+
+        [hidden] {
+            display: none !important;
+        }
+
+        @media (max-width: 720px) {
+            .grid {
+                grid-template-columns: 1fr;
+            }
+
+            .field-grid {
+                grid-template-columns: 1fr;
+            }
+
+            .stat-grid {
+                grid-template-columns: 1fr;
+            }
+
+            .topbar {
+                align-items: flex-start;
+            }
+
+            .hero {
+                padding: 22px;
+            }
+
+            .panel {
+                padding: 17px;
+            }
+
+            #water-risk-map {
+                height: 320px;
+            }
+        }
+
+
+/* =========================================
+   AQUAGUARD AI — BFS GRAPH EXPLORER
+   ========================================= */
+.bfs-panel { margin-bottom: 24px; }
+.bfs-intro { display:flex; justify-content:space-between; align-items:flex-start; gap:15px; flex-wrap:wrap; }
+.bfs-intro h3 { margin:0 0 5px; }
+.bfs-intro p { margin:0; }
+.bfs-tag { display:inline-block; padding:6px 10px; border-radius:20px; background:#e0f4f4; color:#075e68; font-size:11px; font-weight:800; letter-spacing:.5px; }
+.bfs-controls { display:grid; grid-template-columns:1fr 1fr auto; align-items:end; gap:15px; margin:22px 0; }
+.bfs-controls select { display:block; width:100%; margin-top:6px; padding:11px; border:1px solid #cbdde2; border-radius:8px; background:white; color:#17313b; font:inherit; }
+.bfs-buttons { display:flex; flex-wrap:wrap; gap:8px; }
+.bfs-legend { display:flex; gap:18px; flex-wrap:wrap; margin:15px 0; color:#627984; font-size:13px; }
+.bfs-legend span { display:flex; align-items:center; gap:7px; }
+.legend-dot { width:11px; height:11px; display:inline-block; border-radius:50%; }
+.unvisited-dot { background:#dce8ec; border:1px solid #79949c; }
+.current-dot { background:#f0a928; }
+.visited-dot { background:#087f8c; }
+.bfs-graph-wrap { width:100%; overflow-x:auto; border:1px solid #dce8ec; border-radius:14px; background:radial-gradient(circle at 1px 1px,#d7e8e9 1px,transparent 0); background-size:20px 20px; padding:10px; }
+#bfs-graph { display:block; width:100%; min-width:480px; height:auto; }
+.bfs-edge { stroke:#a9c5c9; stroke-width:4; stroke-linecap:round; transition:stroke .25s,stroke-width .25s; }
+.bfs-edge.edge-active { stroke:#087f8c; stroke-width:6; }
+.bfs-node circle { fill:#fff; stroke:#8baeb4; stroke-width:3; transition:fill .25s,stroke .25s; }
+.bfs-node text { pointer-events:none; text-anchor:middle; font-family:Arial,sans-serif; }
+.bfs-node .node-letter { font-size:19px; font-weight:800; fill:#17313b; }
+.bfs-node .node-name { font-size:12px; font-weight:600; fill:#31545e; }
+.bfs-node.node-visited circle { fill:#087f8c; stroke:#075e68; }
+.bfs-node.node-visited .node-letter { fill:#fff; }
+.bfs-node.node-current circle { fill:#f0a928; stroke:#c47c09; stroke-width:5; }
+.bfs-node.node-current .node-letter { fill:#17313b; }
+.bfs-results { display:grid; grid-template-columns:repeat(3,minmax(0,1fr)); gap:12px; margin-top:18px; }
+.bfs-result-card { min-width:0; padding:15px; border:1px solid #dce8ec; border-radius:12px; background:#f7fbfc; }
+.bfs-result-card span { display:block; color:#627984; font-size:12px; margin-bottom:7px; }
+.bfs-result-card strong { display:block; color:#075e68; font-size:16px; overflow-wrap:anywhere; }
+.bfs-explanation { margin-top:16px; padding:16px; border-left:4px solid #087f8c; border-radius:8px; background:#eaf7f7; }
+.bfs-explanation strong { color:#075e68; }
+.bfs-explanation p { margin:5px 0 0; color:#31545e; }
+.bfs-distance { margin-top:22px; }
+.bfs-distance h3 { margin-bottom:5px; }
+.bfs-distance > p { margin-top:0; font-size:13px; }
+#bfs-distance-list { display:grid; grid-template-columns:repeat(3,minmax(0,1fr)); gap:8px; }
+.bfs-distance-item { padding:10px; border:1px solid #dce8ec; border-radius:8px; background:#fff; font-size:13px; }
+.bfs-distance-item strong { color:#087f8c; }
+.bfs-disclaimer { margin-top:18px; color:#79611e; background:#fff9e8; border-left:4px solid #d39b18; border-radius:6px; padding:12px; font-size:12px; }
+@media (max-width:720px) { .bfs-controls { grid-template-columns:1fr; } .bfs-results { grid-template-columns:1fr; } #bfs-distance-list { grid-template-columns:repeat(2,minmax(0,1fr)); } .bfs-buttons button { flex:1; } }
+
+    </style>
+</head>
+
+<body>
+    <header class="topbar">
+        <div class="brand">
+            <div class="brand-icon">💧</div>
+            <div>
+                <h1>AquaGuard AI</h1>
+                <p>Water Quality &amp; Complaint Intelligence</p>
+            </div>
+        </div>
+
+        <nav class="nav-links" aria-label="Main navigation">
+            <a href="/">Dashboard</a>
+            <a href="/complaints.html">Report a Complaint</a>
+            <a href="/admin.html">Admin Dashboard</a>
+        </nav>
+    </header>
+
+    <main class="container">
+        <section class="hero">
+            <h2>Smarter Water Monitoring</h2>
+            <p>
+                Analyze water quality readings, compare locations,
+                identify areas that need attention, and explore
+                the demonstration risk dashboard.
+            </p>
+        </section>
+
+        <section class="section-heading">
+            <h2>Water Quality Analysis</h2>
+            <p>
+                Enter readings and send them to the C analysis backend.
+            </p>
+        </section>
+
+        <div class="grid">
+            <section class="panel">
+                <h2>Enter Water Readings</h2>
+
+                <form id="analysis-form">
+                    <label for="area">Area / Location Name</label>
+                    <select id="area" name="area" required>
+                        <option value="Main Tank">A — Main Tank</option>
+                        <option value="Campus Block A" selected>B — Campus Block A</option>
+                        <option value="Campus Block B">C — Campus Block B</option>
+                        <option value="Hostel">D — Hostel</option>
+                        <option value="Cafeteria">E — Cafeteria</option>
+                        <option value="Laboratory">F — Laboratory</option>
+                    </select>
+
+                    <div class="field-grid">
+                        <label for="ph">
+                            pH (0–14)
+                            <input
+                                id="ph"
+                                name="ph"
+                                type="number"
+                                min="0"
+                                max="14"
+                                step="0.1"
+                                value="5.8"
+                                required
+                            >
+                        </label>
+
+                        <label for="turbidity">
+                            Turbidity (NTU)
+                            <input
+                                id="turbidity"
+                                name="turbidity"
+                                type="number"
+                                min="0"
+                                step="0.1"
+                                value="2.4"
+                                required
+                            >
+                        </label>
+
+                        <label for="oxygen">
+                            Dissolved Oxygen (mg/L)
+                            <input
+                                id="oxygen"
+                                name="oxygen"
+                                type="number"
+                                min="0"
+                                step="0.1"
+                                value="6.2"
+                                required
+                            >
+                        </label>
+
+                        <label for="complaints">
+                            Complaint Count
+                            <input
+                                id="complaints"
+                                name="complaints"
+                                type="number"
+                                min="0"
+                                step="1"
+                                value="8"
+                                required
+                            >
+                        </label>
+                    </div>
+
+                    <div class="actions">
+                        <button
+                            class="primary"
+                            type="submit"
+                        >
+                            Analyze Water
+                        </button>
+
+                        <button
+                            class="secondary"
+                            id="reset"
+                            type="button"
+                        >
+                            Reset
+                        </button>
+                    </div>
+                </form>
+
+                <p id="status" class="status" role="status">
+                    Enter readings and click Analyze Water.
+                </p>
+            </section>
+
+            <section class="panel" id="result-panel">
+                <div id="empty-state">
+                    <h2>Analysis Result</h2>
+                    <p class="muted">
+                        Your risk score, priority level,
+                        reasons and suggested action will appear here.
+                    </p>
+                </div>
+
+                <div id="result" hidden>
+                    <h2>Analysis Result</h2>
+
+                    <p id="result-area"></p>
+
+                    <div class="result-score">
+                        <div class="score-circle">
+                            <span id="score">0</span>
+                        </div>
+
+                        <div>
+                            <p class="muted">Risk score out of 100</p>
+                            <span id="priority" class="priority low">
+                                Low
+                            </span>
+                        </div>
+                    </div>
+
+                    <div
+                        class="meter"
+                        aria-label="Risk score meter"
+                    >
+                        <div id="meter-fill"></div>
+                    </div>
+
+                    <h3>Analysis Reasons</h3>
+                    <ul id="reasons"></ul>
+
+                    <h3>Suggested Action</h3>
+                    <p id="action"></p>
+
+                    <div class="actions">
+                        <button
+                            class="primary"
+                            id="save-area"
+                            type="button"
+                            disabled
+                        >
+                            Add Area to Comparison
+                        </button>
+                    </div>
+                </div>
+            </section>
+        </div>
+
+        <section class="section-heading">
+            <h2>Area Comparison &amp; Ranking</h2>
+            <p>
+                Compare analyzed locations from highest to lowest
+                demonstration risk score.
+            </p>
+        </section>
+
+        <section class="panel">
+            <div class="actions">
+                <button
+                    class="secondary"
+                    id="load-samples"
+                    type="button"
+                >
+                    Load Sample Areas
+                </button>
+
+                <button
+                    class="danger"
+                    id="clear-comparison"
+                    type="button"
+                >
+                    Clear Comparison
+                </button>
+            </div>
+
+            <p id="area-count" class="muted">0 AREAS</p>
+
+            <div id="comparison-empty">
+                <p class="muted">
+                    No areas have been added yet.
+                    Analyze an area or load the illustrative samples.
+                </p>
+            </div>
+
+            <div id="comparison-table-wrap" class="table-wrap" hidden>
+                <table>
+                    <thead>
+                        <tr>
+                            <th>Rank</th>
+                            <th>Area</th>
+                            <th>Risk Score</th>
+                            <th>Priority</th>
+                            <th>Reasons</th>
+                            <th>Suggested Action</th>
+                            <th>Manage</th>
+                        </tr>
+                    </thead>
+
+                    <tbody id="comparison-body"></tbody>
+                </table>
+            </div>
+        </section>
+
+        <section class="section-heading">
+            <h2>Risk Analytics</h2>
+            <p>
+                Summary statistics and a visual comparison
+                of the analyzed areas.
+            </p>
+        </section>
+
+        <div class="stat-grid">
+            <section class="stat-card">
+                <p>Total Areas Analyzed</p>
+                <strong id="stat-total">0</strong>
+            </section>
+
+            <section class="stat-card">
+                <p>High / Critical Areas</p>
+                <strong id="stat-high">0</strong>
+            </section>
+
+            <section class="stat-card">
+                <p>Average Risk Score</p>
+                <strong id="stat-average">0</strong>
+            </section>
+        </div>
+
+        <section class="panel" style="margin-top: 20px;">
+            <h2>Area Risk Comparison Chart</h2>
+            <div id="risk-chart">
+                <p class="muted">
+                    Load sample areas or analyze an area
+                    to display the chart.
+                </p>
+            </div>
+        </section>
+
+        <section class="section-heading">
+            <h2>Interactive Water Risk Map</h2>
+            <p>
+                Select a marker to inspect the area's score
+                and suggested action.
+            </p>
+        </section>
+
+        <section class="panel">
+            <div id="water-risk-map"></div>
+
+            <p id="map-status" class="muted">
+                Loading map...
+            </p>
+
+            <div id="map-details" aria-live="polite">
+                <p class="muted">
+                    Click a marker to view its details.
+                </p>
+            </div>
+        </section>
+
+
+        <!-- BFS WATER NETWORK GRAPH -->
+        <section class="section-heading" id="bfs-section">
+            <h2>Water Network Graph — BFS Explorer</h2>
+            <p>Explore connected water-supply locations using Breadth-First Search (BFS).</p>
+        </section>
+        <section class="panel bfs-panel">
+            <div class="bfs-intro">
+                <div>
+                    <h3>Campus Water Network</h3>
+                    <p class="muted">The graph updates from locations in Area Comparison. Add an analyzed area to show its node; removing it from comparison removes its node and edges.</p>
+                </div>
+                <span class="bfs-tag">DSA · GRAPH · BFS</span>
+            </div>
+            <div class="bfs-controls">
+                <label for="bfs-start">Starting Location
+                    <select id="bfs-start">
+                        <option value="A">A — Main Tank</option>
+                        <option value="B">B — Campus Block A</option>
+                        <option value="C">C — Campus Block B</option>
+                        <option value="D">D — Hostel</option>
+                        <option value="E">E — Cafeteria</option>
+                        <option value="F">F — Laboratory</option>
+                    </select>
+                </label>
+                <label for="bfs-speed">Animation Speed
+                    <select id="bfs-speed">
+                        <option value="1200">Slow</option>
+                        <option value="700" selected>Normal</option>
+                        <option value="300">Fast</option>
+                    </select>
+                </label>
+                <div class="bfs-buttons">
+                    <button class="primary" id="bfs-run" type="button">Run BFS</button>
+                    <button class="secondary" id="bfs-reset" type="button">Reset Graph</button>
+                </div>
+            </div>
+            <div class="bfs-legend">
+                <span><i class="legend-dot unvisited-dot"></i> Unvisited</span>
+                <span><i class="legend-dot current-dot"></i> Current node</span>
+                <span><i class="legend-dot visited-dot"></i> Visited</span>
+            </div>
+            <div class="bfs-graph-wrap">
+                <svg id="bfs-graph" viewBox="0 0 720 370" role="img" aria-label="Dynamic graph of water-supply locations currently in comparison"></svg>
+            </div>
+            <div class="bfs-results">
+                <div class="bfs-result-card"><span>Traversal Order</span><strong id="bfs-order">Not started</strong></div>
+                <div class="bfs-result-card"><span>Current Queue</span><strong id="bfs-queue">[ ]</strong></div>
+                <div class="bfs-result-card"><span>Nodes Visited</span><strong id="bfs-visited-count">0 / 0</strong></div>
+            </div>
+            <div class="bfs-explanation" aria-live="polite">
+                <strong id="bfs-step-title">Ready to explore</strong>
+                <p id="bfs-step-message">Select a starting location and click Run BFS.</p>
+            </div>
+            <div class="bfs-distance">
+                <h3>Distance from Starting Location</h3>
+                <p class="muted">Distance means the number of graph edges (hops), not physical distance in metres.</p>
+                <div id="bfs-distance-list"></div>
+            </div>
+            <p class="bfs-disclaimer">Demonstration graph only. Connections are illustrative and do not represent verified campus pipelines.</p>
+        </section>
+        <!-- END BFS WATER NETWORK GRAPH -->
+
+        <section class="disclaimer">
+            <strong>Important:</strong>
+            This project uses demonstration risk-scoring rules
+            and illustrative map coordinates. Scores are not a
+            certified drinking-water safety assessment. Actual
+            safety decisions require appropriate sampling,
+            validated laboratory testing and qualified review.
+        </section>
+    </main>
+
+    <footer>
+        <p>
+            AquaGuard AI — Water Quality &amp; Complaint Intelligence
+        </p>
+        <p>Educational project demonstration</p>
+    </footer>
+
+    <!-- Load Leaflet before the dashboard JavaScript -->
+    <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+    <script src="/app.js"></script>
+</body>
+</html>
